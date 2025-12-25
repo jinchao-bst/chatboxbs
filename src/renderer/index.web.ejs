@@ -13,11 +13,13 @@
     <script>
       window.dataLayer = window.dataLayer || []
       function gtag() {
+        // Analytics disabled: keep stub to avoid errors
         dataLayer.push(arguments)
       }
       gtag('js', new Date())
     </script>
-    <script defer data-domain="web.chatboxai.app" src="https://plausible.midway.run/js/script.js"></script>
+    <!-- Plausible analytics disabled for internal debug builds.
+         External tracking script intentionally not loaded. -->
   </head>
   <body>
     <div id="root">

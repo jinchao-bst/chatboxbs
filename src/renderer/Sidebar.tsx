@@ -3,7 +3,6 @@ import SwipeableDrawer from '@mui/material/SwipeableDrawer'
 import {
   IconCirclePlus,
   IconCode,
-  IconInfoCircle,
   IconLayoutSidebarLeftCollapse,
   IconMessageChatbot,
   IconPhotoPlus,
@@ -19,10 +18,9 @@ import SessionList from './components/SessionList'
 import { FORCE_ENABLE_DEV_PAGES } from './dev/devToolsConfig'
 import useNeedRoomForMacWinControls from './hooks/useNeedRoomForWinControls'
 import { useIsSmallScreen, useSidebarWidth } from './hooks/useScreenChange'
-import useVersion from './hooks/useVersion'
 import { navigateToSettings } from './modals/Settings'
 import { trackingEvent } from './packages/event'
-import icon from './static/icon.png'
+import icon from '../../assets/icon.png'
 import { createEmpty } from './stores/sessionActions'
 import { useLanguage } from './stores/settingsStore'
 import { useUIStore } from './stores/uiStore'
@@ -30,7 +28,6 @@ import { CHATBOX_BUILD_PLATFORM } from './variables'
 
 export default function Sidebar() {
   const { t } = useTranslation()
-  const versionHook = useVersion()
   const language = useLanguage()
   const navigate = useNavigate()
   const showSidebar = useUIStore((s) => s.showSidebar)
@@ -126,8 +123,8 @@ export default function Sidebar() {
       PaperProps={
         language === 'ar' ? { sx: { direction: 'rtl', overflowY: 'initial' } } : { sx: { overflowY: 'initial' } }
       }
-      disableSwipeToOpen={CHATBOX_BUILD_PLATFORM !== 'ios'} // 只在iOS设备上启用SwipeToOpen
-      disableEnforceFocus={true} // 关闭 focus trap，避免在侧边栏打开时弹出的 modal 中 input 无法点击
+      disableSwipeToOpen={CHATBOX_BUILD_PLATFORM !== 'ios'} // Only enable SwipeToOpen on iOS devices
+      disableEnforceFocus={true} // Disable focus trap to avoid input unclickable in modals when sidebar is open
     >
       <Stack
         h="100%"
@@ -214,22 +211,6 @@ export default function Sidebar() {
               p="xs"
             />
           )}
-          <NavLink
-            c="chatbox-tertiary"
-            className="rounded"
-            label={`${t('About')} ${/\d/.test(versionHook.version) ? `(${versionHook.version})` : ''}`}
-            leftSection={<ScalableIcon icon={IconInfoCircle} size={20} />}
-            onClick={() => {
-              navigate({
-                to: '/about',
-              })
-              if (isSmallScreen) {
-                setShowSidebar(false)
-              }
-            }}
-            variant="light"
-            p="xs"
-          />
         </Stack>
         {!isSmallScreen && (
           <Box

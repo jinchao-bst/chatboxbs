@@ -27,7 +27,7 @@ import { ConfirmDeleteMenuItem } from '@/components/ConfirmDeleteButton'
 import Page from '@/components/Page'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import StyledMenu from '@/components/StyledMenu'
-import { useMyCopilots, useRemoteCopilots } from '@/hooks/useCopilots'
+import { useMyCopilots } from '@/hooks/useCopilots'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { trackingEvent } from '@/packages/event'
 import * as remote from '@/packages/remote'
@@ -48,7 +48,6 @@ function Copilots() {
   const { t } = useTranslation()
 
   const store = useMyCopilots()
-  const { copilots: remoteCopilots } = useRemoteCopilots()
 
   const handleClose = () => {
     setOpen(false)
@@ -158,25 +157,6 @@ function Copilots() {
                       store.remove(item.id)
                     }}
                   />
-                ))}
-              </Box>
-            </Box>
-
-            {/* Chatbox Featured Section */}
-            <Box>
-              <Text size="md" fw={700} mb={2} c="chatbox-primary">
-                {t('Chatbox Featured')}
-              </Text>
-
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                  gap: 1.5,
-                }}
-              >
-                {remoteCopilots?.map((item, ix) => (
-                  <MiniItem key={`${item.id}_${ix}`} mode="remote" detail={item} selectMe={() => selectCopilot(item)} />
                 ))}
               </Box>
             </Box>

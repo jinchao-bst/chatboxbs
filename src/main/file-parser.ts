@@ -153,7 +153,7 @@ export async function parseEpub(filePath: string): Promise<string> {
 
             return plainText || null
           } catch (chapterError) {
-            log.warn(`Failed to read chapter ${chapter.id}, skipping:`, chapterError)
+            log.debug(`Failed to read chapter ${chapter.id}, skipping:`, chapterError)
             return null // Return null for failed chapters to continue processing
           }
         }

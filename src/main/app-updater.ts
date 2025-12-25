@@ -31,30 +31,8 @@ export class AppUpdater {
   }
 
   async tryUpdate() {
-    const feedUrls = [
-      'https://chatboxai.app/api/auto_upgrade',
-      'https://api.chatboxai.app/api/auto_upgrade',
-      'https://api.ai-chatbox.com/api/auto_upgrade',
-      'https://api.chatboxapp.xyz/api/auto_upgrade',
-      'https://api.chatboxai.com/api/auto_upgrade',
-    ]
-    for (const url of feedUrls) {
-      try {
-        autoUpdater.setFeedURL(url)
-        const settings = getSettings()
-
-        if (settings.betaUpdate) {
-          autoUpdater.channel = 'beta'
-          autoUpdater.allowDowngrade = false
-        }
-        const result = await autoUpdater.checkForUpdatesAndNotify()
-        if (result) {
-          return result
-        }
-      } catch (e) {
-        log.error(`auto_updater: attempt failed: ${url}. `, e)
-      }
-    }
+    // Disabled for internal debug builds - no auto-update checks
+    log.info('Auto-update disabled for internal debug builds')
     return null
   }
 }

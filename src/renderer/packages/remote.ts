@@ -113,20 +113,8 @@ const getChatboxHeaders = async () => {
 // ========== 各个接口方法 ==========
 
 export async function checkNeedUpdate(version: string, os: string, config: Config, settings: Settings) {
-  type Response = {
-    need_update?: boolean
-  }
-  // const res = await ofetch<Response>(`${RELEASE_ORIGIN}/chatbox_need_update/${version}`, {
-  const res = await ofetch<Response>(`${getAPIOrigin()}/chatbox_need_update/${version}`, {
-    method: 'POST',
-    retry: 3,
-    body: {
-      uuid: config.uuid,
-      os: os,
-      allowReportingAndTracking: settings.allowReportingAndTracking ? 1 : 0,
-    },
-  })
-  return !!res.need_update
+  // Disabled for internal debug builds - return false (no update needed)
+  return false
 }
 
 // export async function getSponsorAd(): Promise<null | SponsorAd> {
@@ -152,24 +140,13 @@ export async function checkNeedUpdate(version: string, os: string, config: Confi
 // }
 
 export async function listCopilots(lang: string) {
-  type Response = {
-    data: CopilotDetail[]
-  }
-  const res = await ofetch<Response>(`${getAPIOrigin()}/api/copilots/list`, {
-    method: 'POST',
-    retry: 3,
-    body: { lang },
-  })
-  return res.data
+  // Disabled for internal debug builds - return empty array without API access
+  return []
 }
 
 export async function recordCopilotShare(detail: CopilotDetail) {
-  await ofetch(`${getAPIOrigin()}/api/copilots/share-record`, {
-    method: 'POST',
-    body: {
-      detail: detail,
-    },
-  })
+  // Disabled for internal debug builds - no API access
+  // Silently ignore share recording
 }
 
 export async function getPremiumPrice() {
@@ -187,14 +164,12 @@ export async function getPremiumPrice() {
 }
 
 export async function getRemoteConfig(config: keyof RemoteConfig) {
-  type Response = {
-    data: Pick<RemoteConfig, typeof config>
+  // Disabled for internal debug builds - return default config without API access
+  // Return default values to prevent blocking app startup
+  const defaultConfig: Partial<Record<keyof RemoteConfig, any>> = {
+    setting_chatboxai_first: false,
   }
-  const res = await ofetch<Response>(`${getAPIOrigin()}/api/remote_config/${config}`, {
-    retry: 3,
-    headers: await getChatboxHeaders(),
-  })
-  return res['data']
+  return defaultConfig[config] || {}
 }
 
 export interface DialogConfig {
@@ -203,16 +178,8 @@ export interface DialogConfig {
 }
 
 export async function getDialogConfig(params: { uuid: string; language: string; version: string }) {
-  type Response = {
-    data: null | DialogConfig
-  }
-  const res = await ofetch<Response>(`${getAPIOrigin()}/api/dialog_config`, {
-    method: 'POST',
-    retry: 3,
-    body: params,
-    headers: await getChatboxHeaders(),
-  })
-  return res['data'] || null
+  // Disabled for internal debug builds - return null (no dialog config)
+  return null
 }
 
 export async function getLicenseDetail(params: { licenseKey: string }) {
@@ -497,32 +464,12 @@ const ModelManifestResponseSchema = z.object({
 })
 
 export async function getModelManifest(params: { aiProvider: ModelProvider; licenseKey?: string; language?: string }) {
-  const afetch = await getAfetch()
-  const res = await afetch(
-    `${getAPIOrigin()}/api/model_manifest`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(await getChatboxHeaders()),
-      },
-      body: JSON.stringify({
-        aiProvider: params.aiProvider,
-        licenseKey: params.licenseKey,
-        language: params.language,
-      }),
-    },
-    {
-      parseChatboxRemoteError: true,
-      retry: 2,
-    }
-  )
-  const { success, data, error } = ModelManifestResponseSchema.safeParse(await res.json())
-  if (!success) {
-    console.log('getModelManifest error', error)
-    return []
+  // Disabled for internal debug builds - return empty manifest without API access
+  // Return structure: { groupName: string, models: ProviderModelInfo[] }
+  return {
+    groupName: '',
+    models: [],
   }
-  return data.data
 }
 
 export async function reportContent(params: { id: string; type: string; details: string }) {

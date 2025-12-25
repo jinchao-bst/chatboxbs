@@ -33,6 +33,7 @@ import {
 } from './store-node'
 import { resolveHtmlPath } from './util'
 import * as windowState from './window_state'
+import * as bluestacksLauncher from './bluestacks-launcher'
 
 // Only import knowledge-base module if not on win32 arm64 (libsql doesn't support win32 arm64)
 if (!(process.platform === 'win32' && process.arch === 'arm64')) {
@@ -575,6 +576,15 @@ ipcMain.handle('getLocale', () => {
 ipcMain.handle('openLink', (event, link) => {
   return shell.openExternal(link)
 })
+// BlueStacks launcher IPC handlers
+ipcMain.handle('bluestacks:checkStatus', async () => {
+  return bluestacksLauncher.isBluestacksAIRunning()
+})
+
+ipcMain.handle('bluestacks:start', async () => {
+  return bluestacksLauncher.startBluestacksAI()
+})
+
 ipcMain.handle('ensureShortcutConfig', (event, json) => {
   const config: ShortcutSetting = JSON.parse(json)
   unregisterShortcuts()

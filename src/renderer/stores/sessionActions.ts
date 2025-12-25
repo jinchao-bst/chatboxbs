@@ -62,10 +62,10 @@ function trackGenerateEvent(
   sessionType: SessionType | undefined,
   options?: { operationType?: 'send_message' | 'regenerate' }
 ) {
-  // 获取更有意义的 provider 标识
+  // Get a more meaningful provider identifier
   let providerIdentifier = settings.provider
   if (settings.provider?.startsWith('custom-provider-')) {
-    // 对于自定义 provider，使用 apiHost 作为标识
+    // For custom providers, use apiHost as identifier
     const providerSettings = globalSettings.providers?.[settings.provider]
     if (providerSettings?.apiHost) {
       try {
@@ -156,8 +156,8 @@ export function switchCurrentSession(sessionId: string) {
   router.navigate({
     to: `/session/${sessionId}`,
   })
-  // scrollActions.scrollToBottom() // 切换会话时自动滚动到底部
-  scrollActions.clearAutoScroll() // 切换会话时清除自动滚动
+  // scrollActions.scrollToBottom() // Auto scroll to bottom when switching sessions
+  scrollActions.clearAutoScroll() // Clear auto scroll when switching sessions
 }
 
 export async function reorderSessions(oldIndex: number, newIndex: number) {
@@ -229,7 +229,7 @@ export async function editThread(sessionId: string, threadId: string, newThread:
   const session = await chatStore.getSession(sessionId)
   if (!session || !session.threads) return
 
-  // 特殊情况： 如果修改的是当前的话题，则直接修改当前会话的threadName, 而不是name
+  // Special case: If modifying the current thread, directly update the session's threadName instead of name
   if (threadId === sessionId) {
     await chatStore.updateSession(sessionId, { threadName: newThread.name })
     return
@@ -775,6 +775,412 @@ async function generate(
       // 对话消息生成
       case 'chat':
       case undefined: {
+        // Check if this is a BlueStacks automation task or chat assistant
+        const userMessage = messages[targetMsgIx - 1]
+        const userText = userMessage?.contentParts?.find((p) => p.type === 'text')?.text || ''
+        
+        // Check if this session uses BlueStacks Chat Assistant copilot
+        const isBluestacksChatAssistant = session?.copilotId === 'bluestacks-chat-assistant'
+        
+        // Import BlueStacks task handler
+        const { isBluestacksTask, handleBluestacksTask, saveScreenshotToStorage } = await import(
+          '@/packages/phoneAgent/bluestacksTaskHandler'
+        )
+        
+        // Import BlueStacks chat assistant handler
+        const { handleChatAssistant } = await import('@/packages/bluestacksChatAssistant')
+
+        // Handle BlueStacks Chat Assistant
+        if (isBluestacksChatAssistant) {
+          const startTime = Date.now()
+          let firstTokenLatency: number | undefined
+          const persistInterval = 2000
+          let lastPersistTimestamp = Date.now()
+
+          const modifyMessageCache: OnResultChangeWithCancel = async (updated) => {
+            const textLength = getMessageText(targetMsg, true, true).length
+            if (!firstTokenLatency && textLength > 0) {
+              firstTokenLatency = Date.now() - startTime
+            }
+            targetMsg = {
+              ...targetMsg,
+              ...pickBy(updated, identity),
+              status: textLength > 0 ? [] : targetMsg.status,
+              firstTokenLatency,
+            }
+            const shouldPersist = Date.now() - lastPersistTimestamp >= persistInterval
+            await modifyMessage(sessionId, targetMsg, false, !shouldPersist)
+            if (shouldPersist) {
+              lastPersistTimestamp = Date.now()
+            }
+          }
+
+          // Initialize message
+          targetMsg = {
+            ...targetMsg,
+            contentParts: [
+              {
+                type: 'text',
+                text: '正在连接 BlueStacks LLM...',
+              },
+            ],
+          }
+          await modifyMessage(sessionId, targetMsg)
+
+          try {
+            await handleChatAssistant({
+              sessionId,
+              userMessage,
+              assistantMessage: targetMsg,
+              onCancelReady: (cancelFn) => {
+                targetMsg = {
+                  ...targetMsg,
+                  cancel: cancelFn,
+                }
+                modifyMessage(sessionId, targetMsg, false).catch(console.error)
+              },
+              onUpdate: async (message) => {
+                await modifyMessageCache({
+                  contentParts: [
+                    {
+                      type: 'text',
+                      text: message,
+                    },
+                  ],
+                })
+              },
+              onComplete: async (finalMessage) => {
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  contentParts: [
+                    {
+                      type: 'text',
+                      text: finalMessage,
+                    },
+                  ],
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+              onError: async (error) => {
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  contentParts: [
+                    {
+                      type: 'text',
+                      text: `❌ **错误**\n\n${error.message}`,
+                    },
+                  ],
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+            })
+            break
+          } catch (error) {
+            targetMsg = {
+              ...targetMsg,
+              generating: false,
+              cancel: undefined,
+              contentParts: [
+                {
+                  type: 'text',
+                  text: `❌ **错误**\n\n${error instanceof Error ? error.message : String(error)}`,
+                },
+              ],
+              status: [],
+            }
+            await modifyMessage(sessionId, targetMsg, true)
+            break
+          }
+        }
+
+        if (isBluestacksTask(userText)) {
+          // Handle BlueStacks automation task
+          const startTime = Date.now()
+          let firstTokenLatency: number | undefined
+          const persistInterval = 2000
+          let lastPersistTimestamp = Date.now()
+          let stepCount = 0
+
+          const modifyMessageCache: OnResultChangeWithCancel = async (updated) => {
+            const textLength = getMessageText(targetMsg, true, true).length
+            if (!firstTokenLatency && textLength > 0) {
+              firstTokenLatency = Date.now() - startTime
+            }
+            targetMsg = {
+              ...targetMsg,
+              ...pickBy(updated, identity),
+              status: textLength > 0 ? [] : targetMsg.status,
+              firstTokenLatency,
+            }
+            const shouldPersist = Date.now() - lastPersistTimestamp >= persistInterval
+            await modifyMessage(sessionId, targetMsg, false, !shouldPersist)
+            if (shouldPersist) {
+              lastPersistTimestamp = Date.now()
+            }
+          }
+
+          // Initialize message with initial status
+          targetMsg = {
+            ...targetMsg,
+            contentParts: [
+              {
+                type: 'text',
+                text: '正在连接 BlueStacks 并执行任务...',
+              },
+            ],
+          }
+          await modifyMessage(sessionId, targetMsg)
+
+          try {
+            // Track accumulated content parts
+            let accumulatedContentParts = [...(targetMsg.contentParts || [])]
+
+            await handleBluestacksTask({
+              sessionId,
+              userMessage,
+              assistantMessage: targetMsg,
+              onCancelReady: (cancelFn) => {
+                // Set cancel function on message
+                targetMsg = {
+                  ...targetMsg,
+                  cancel: cancelFn,
+                }
+                modifyMessage(sessionId, targetMsg, false).catch(console.error)
+              },
+              onStepUpdate: async (stepResult, screenshot) => {
+                stepCount++
+                const newContentParts: typeof targetMsg.contentParts = []
+
+                // Add thinking/reasoning if available
+                if (stepResult.thinking) {
+                  newContentParts.push({
+                    type: 'reasoning',
+                    text: stepResult.thinking,
+                    startTime: Date.now() - 1000, // Approximate
+                    duration: 1000,
+                  })
+                }
+
+                // Add screenshot if available
+                if (screenshot) {
+                  try {
+                    const storageKey = await saveScreenshotToStorage(screenshot)
+                    newContentParts.push({
+                      type: 'image',
+                      storageKey,
+                    })
+                  } catch (e) {
+                    console.error('Failed to save screenshot:', e)
+                  }
+                }
+
+                // Add step information
+                const stepInfo = `**步骤 ${stepCount}**\n\n`
+                
+                // Add thinking/reasoning if available
+                const thinkingInfo = stepResult.thinking
+                  ? `💭 **思考过程:**\n${stepResult.thinking}\n\n`
+                  : ''
+                
+                const actionInfo = stepResult.action
+                  ? `🎯 **执行动作:**\n\`\`\`json\n${JSON.stringify(stepResult.action, null, 2)}\n\`\`\`\n\n`
+                  : ''
+                const messageInfo = stepResult.message ? `📋 **结果:** ${stepResult.message}\n\n` : ''
+                const statusInfo = stepResult.finished ? '✅ **任务完成**' : '⏳ **进行中...**'
+
+                newContentParts.push({
+                  type: 'text',
+                  text: `${stepInfo}${thinkingInfo}${actionInfo}${messageInfo}${statusInfo}`,
+                })
+
+                // Accumulate content parts
+                accumulatedContentParts = [...accumulatedContentParts, ...newContentParts]
+
+                await modifyMessageCache({
+                  contentParts: accumulatedContentParts,
+                })
+              },
+              onComplete: async (finalMessage) => {
+                const finalContentParts: typeof targetMsg.contentParts = [
+                  ...(targetMsg.contentParts || []),
+                  {
+                    type: 'text',
+                    text: `\n\n✅ **任务完成**\n\n${finalMessage}`,
+                  },
+                ]
+
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  contentParts: finalContentParts,
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+              onError: async (error) => {
+                const errorContentParts: typeof targetMsg.contentParts = [
+                  ...(targetMsg.contentParts || []),
+                  {
+                    type: 'text',
+                    text: `\n\n❌ **任务失败**\n\n${error.message}`,
+                  },
+                ]
+
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  error: error.message,
+                  contentParts: errorContentParts,
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+            })
+          } catch (error) {
+            targetMsg = {
+              ...targetMsg,
+              generating: false,
+              cancel: undefined,
+              error: error instanceof Error ? error.message : String(error),
+              status: [],
+            }
+            await modifyMessage(sessionId, targetMsg, true)
+          }
+          break
+        }
+
+        // Check if this is a SNS automation task
+        const { isSNSTask, handleSNSTask } = await import('@/packages/snsAgent/snsTaskHandler')
+
+        if (isSNSTask(userText)) {
+          // Handle SNS automation task
+          const startTime = Date.now()
+          let firstTokenLatency: number | undefined
+          const persistInterval = 2000
+          let lastPersistTimestamp = Date.now()
+
+          const modifyMessageCache: OnResultChangeWithCancel = async (updated) => {
+            const textLength = getMessageText(targetMsg, true, true).length
+            if (!firstTokenLatency && textLength > 0) {
+              firstTokenLatency = Date.now() - startTime
+            }
+            targetMsg = {
+              ...targetMsg,
+              ...pickBy(updated, identity),
+              status: textLength > 0 ? [] : targetMsg.status,
+              firstTokenLatency,
+            }
+            const shouldPersist = Date.now() - lastPersistTimestamp >= persistInterval
+            await modifyMessage(sessionId, targetMsg, false, !shouldPersist)
+            if (shouldPersist) {
+              lastPersistTimestamp = Date.now()
+            }
+          }
+
+          // Initialize message with initial status
+          targetMsg = {
+            ...targetMsg,
+            contentParts: [
+              {
+                type: 'text',
+                text: '正在连接 SNS API 并执行任务...',
+              },
+            ],
+          }
+          await modifyMessage(sessionId, targetMsg)
+
+          try {
+            // Track accumulated content parts
+            let accumulatedContentParts = [...(targetMsg.contentParts || [])]
+
+            await handleSNSTask({
+              sessionId,
+              userMessage,
+              assistantMessage: targetMsg,
+              onCancelReady: (cancelFn) => {
+                // Set cancel function on message
+                targetMsg = {
+                  ...targetMsg,
+                  cancel: cancelFn,
+                }
+                modifyMessage(sessionId, targetMsg, false).catch(console.error)
+              },
+              onStepUpdate: async (message, progress) => {
+                const progressText = progress !== undefined ? ` (进度: ${progress}%)` : ''
+                const newContentParts: typeof targetMsg.contentParts = [
+                  {
+                    type: 'text',
+                    text: `${message}${progressText}`,
+                  },
+                ]
+
+                // Accumulate content parts
+                accumulatedContentParts = [...accumulatedContentParts, ...newContentParts]
+
+                await modifyMessageCache({
+                  contentParts: accumulatedContentParts,
+                })
+              },
+              onComplete: async (finalMessage) => {
+                const finalContentParts: typeof targetMsg.contentParts = [
+                  ...(targetMsg.contentParts || []),
+                  {
+                    type: 'text',
+                    text: `\n\n${finalMessage}`,
+                  },
+                ]
+
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  contentParts: finalContentParts,
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+              onError: async (error) => {
+                const errorContentParts: typeof targetMsg.contentParts = [
+                  ...(targetMsg.contentParts || []),
+                  {
+                    type: 'text',
+                    text: `\n\n❌ **任务失败**\n\n${error.message}`,
+                  },
+                ]
+
+                targetMsg = {
+                  ...targetMsg,
+                  generating: false,
+                  cancel: undefined,
+                  error: error.message,
+                  contentParts: errorContentParts,
+                  status: [],
+                }
+                await modifyMessage(sessionId, targetMsg, true)
+              },
+            })
+          } catch (error) {
+            targetMsg = {
+              ...targetMsg,
+              generating: false,
+              cancel: undefined,
+              error: error instanceof Error ? error.message : String(error),
+              status: [],
+            }
+            await modifyMessage(sessionId, targetMsg, true)
+          }
+          break
+        }
+
+        // Normal chat message generation
         const startTime = Date.now()
         let firstTokenLatency: number | undefined
         const persistInterval = 2000

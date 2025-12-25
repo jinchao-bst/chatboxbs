@@ -166,13 +166,13 @@ export default class DesktopPlatform implements Platform {
   }
 
   public initTracking(): void {
-    setTimeout(() => {
-      this.trackingEvent('user_engagement', {})
-    }, 4000) // 怀疑应用初始化后需要一段时间才能正常工作
+    // Analytics disabled for internal debug builds.
+    // Keep method to satisfy interface, but do nothing.
   }
   public trackingEvent(name: string, params: { [key: string]: string }) {
-    const dataJson = JSON.stringify({ name, params })
-    this.ipc.invoke('analysticTrackingEvent', dataJson)
+    // Analytics disabled: no-op to avoid sending any tracking events.
+    void name
+    void params
   }
 
   public async shouldShowAboutDialogWhenStartUp(): Promise<boolean> {
@@ -260,5 +260,14 @@ export default class DesktopPlatform implements Platform {
     })
 
     return unsubscribe
+  }
+
+  // BlueStacks launcher
+  public async startBluestacksAI(): Promise<{ success: boolean; message: string }> {
+    return this.ipc.invoke('bluestacks:start')
+  }
+
+  public async checkBluestacksAIStatus(): Promise<boolean> {
+    return this.ipc.invoke('bluestacks:checkStatus')
   }
 }

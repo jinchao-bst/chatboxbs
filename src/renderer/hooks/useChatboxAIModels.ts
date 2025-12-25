@@ -39,6 +39,9 @@ const useChatboxAIModels = () => {
       return res.models
     },
     staleTime: 3600 * 1000,
+    retry: false, // Disable retry to prevent infinite API calls
+    refetchOnWindowFocus: false, // Disable refetch on window focus
+    refetchOnReconnect: false, // Disable refetch on reconnect
   })
 
   const allChatboxAIModels = useMemo(

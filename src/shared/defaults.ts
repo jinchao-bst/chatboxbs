@@ -107,21 +107,21 @@ export function settings(): Settings {
     betaUpdate: false,
 
     shortcuts: {
-      quickToggle: 'Alt+`', // 快速切换窗口显隐的快捷键
-      inputBoxFocus: 'mod+i', // 聚焦输入框的快捷键
-      inputBoxWebBrowsingMode: 'mod+e', // 切换输入框的 web 浏览模式的快捷键
-      newChat: 'mod+n', // 新建聊天的快捷键
-      newPictureChat: 'mod+shift+n', // 新建图片会话的快捷键
-      sessionListNavNext: 'mod+tab', // 切换到下一个会话的快捷键
-      sessionListNavPrev: 'mod+shift+tab', // 切换到上一个会话的快捷键
-      sessionListNavTargetIndex: 'mod', // 会话导航的快捷键
-      messageListRefreshContext: 'mod+r', // 刷新上下文的快捷键
-      dialogOpenSearch: 'mod+k', // 打开搜索对话框的快捷键
-      inputBoxSendMessage: 'Enter', // 发送消息的快捷键
-      inputBoxSendMessageWithoutResponse: 'Ctrl+Enter', // 发送但不生成回复的快捷键
-      optionNavUp: 'up', // 选项导航的快捷键
-      optionNavDown: 'down', // 选项导航的快捷键
-      optionSelect: 'enter', // 选项导航的快捷键
+      quickToggle: 'Alt+`', // Shortcut to quickly toggle window visibility
+      inputBoxFocus: 'mod+i', // Shortcut to focus input box
+      inputBoxWebBrowsingMode: 'mod+e', // Shortcut to toggle web browsing mode in input box
+      newChat: 'mod+n', // Shortcut to create new chat
+      newPictureChat: 'mod+shift+n', // Shortcut to create new picture session
+      sessionListNavNext: 'mod+tab', // Shortcut to navigate to next session
+      sessionListNavPrev: 'mod+shift+tab', // Shortcut to navigate to previous session
+      sessionListNavTargetIndex: 'mod', // Shortcut for session navigation
+      messageListRefreshContext: 'mod+r', // Shortcut to refresh context
+      dialogOpenSearch: 'mod+k', // Shortcut to open search dialog
+      inputBoxSendMessage: 'Enter', // Shortcut to send message
+      inputBoxSendMessageWithoutResponse: 'Ctrl+Enter', // Shortcut to send without generating response
+      optionNavUp: 'up', // Shortcut for option navigation up
+      optionNavDown: 'down', // Shortcut for option navigation down
+      optionSelect: 'enter', // Shortcut for option selection
     },
     extension: {
       webSearch: {
@@ -152,15 +152,15 @@ export function getDefaultPrompt() {
 
 export function chatSessionSettings(): SessionSettings {
   return {
-    provider: ModelProviderEnum.ChatboxAI,
-    modelId: 'chatboxai-4',
+    provider: ModelProviderEnum.Gemini,
+    modelId: 'gemini-2.5-pro',
     maxContextMessageCount: 6,
   }
 }
 
 export function pictureSessionSettings(): SessionSettings {
   return {
-    provider: ModelProviderEnum.ChatboxAI,
+    provider: ModelProviderEnum.OpenAI,
     modelId: 'DALL-E-3',
     imageGenerateNum: 1,
     dalleStyle: 'vivid',
@@ -168,11 +168,6 @@ export function pictureSessionSettings(): SessionSettings {
 }
 
 export const SystemProviders: ProviderBaseInfo[] = [
-  {
-    id: ModelProviderEnum.ChatboxAI,
-    name: 'Chatbox AI',
-    type: ModelProviderType.ChatboxAI,
-  },
   {
     id: ModelProviderEnum.OpenAI,
     name: 'OpenAI',

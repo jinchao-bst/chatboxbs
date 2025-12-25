@@ -121,17 +121,34 @@ const tid = setTimeout(() => {
 }, 1000)
 
 // 等待初始化完成后再渲染
-initializeApp()
+// Add timeout protection to prevent infinite white screen
+const INIT_TIMEOUT = 30000 // 30 seconds max
+
+Promise.race([
+  initializeApp(),
+  new Promise((_, reject) => setTimeout(() => reject(new Error('Initialization timeout')), INIT_TIMEOUT))
+])
   .catch((e) => {
     // 初始化中的各个步骤已经捕获了错误，这里防止未来添加未捕获的逻辑
-    Sentry.captureException(e)
+    Sentry.captureException(e as Error)
     log.error('initializeApp error', e)
   })
   .finally(async () => {
     clearTimeout(tid)
 
     // 等待settings初始化完成，避免闪屏
-    const [settings] = await Promise.all([initSettingsStore(), initLastUsedModelStore()])
+    // Add timeout for settings initialization
+    const settingsPromise = Promise.race([
+      Promise.all([initSettingsStore(), initLastUsedModelStore()]),
+      new Promise<[any, any]>((resolve) => 
+        setTimeout(() => {
+          log.debug('Settings initialization timeout, using defaults')
+          resolve([{ language: 'en' }, {}])
+        }, 5000)
+      )
+    ])
+    
+    const [settings] = await settingsPromise
 
     i18n.changeLanguage(settings.language)
     // 初始化完成，可以开始渲染
@@ -165,7 +182,6 @@ initializeApp()
     }
   })
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals()
+// Performance metrics reporting is disabled for internal debug builds.
+// Call reportWebVitals(...) here if you want to re-enable it.
+// reportWebVitals(console.log)

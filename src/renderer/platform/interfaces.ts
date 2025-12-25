@@ -83,6 +83,10 @@ export interface Platform extends Storage {
   isMaximized(): Promise<boolean>
 
   onMaximizedChange(callback: (isMaximized: boolean) => void): () => void
+
+  // BlueStacks launcher
+  startBluestacksAI?(): Promise<{ success: boolean; message: string }>
+  checkBluestacksAIStatus?(): Promise<boolean>
 }
 
 export interface Exporter {

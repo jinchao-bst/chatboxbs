@@ -1,8 +1,2 @@
-import platforms from '@/platform'
-;(() => {
-  try {
-    platforms.initTracking()
-  } catch (e) {
-    console.error(e)
-  }
-})()
+// Google Analytics initialization disabled for internal debug builds.
+// We intentionally do not call platforms.initTracking() here to avoid any GA traffic.

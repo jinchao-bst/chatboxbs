@@ -4,40 +4,42 @@ import type { SentryAdapter, SentryScope } from '../../shared/utils/sentry_adapt
 import { getSettings } from '../store-node'
 
 function initSentry() {
-  const settings = getSettings()
-  if (!settings.allowReportingAndTracking) {
-    return
-  }
-
-  const version = app.getVersion()
-  Sentry.init({
-    dsn: 'https://eca691c5e01ebfa05958fca1fcb487a9@sentry.midway.run/697',
-    integrations: [],
-    environment: process.env.NODE_ENV || 'development',
-    // Performance Monitoring - set to 1.0 since we control sampling in beforeSend
-    sampleRate: 1.0,
-    tracesSampler(samplingContext) {
-      // For traces related to knowledge-base operations, always sample
-      const isKnowledgeBaseTrace =
-        samplingContext.tags?.component === 'knowledge-base-file' ||
-        samplingContext.tags?.component === 'knowledge-base-db' ||
-        samplingContext.tags?.component === 'knowledge-base'
-
-      if (isKnowledgeBaseTrace) {
-        return 1.0 // 100% sampling for knowledge-base traces
-      }
-
-      return 0.1 // 10% sampling for other traces
-    },
-    release: version,
-    // 设置全局标签
-    initialScope: {
-      tags: {
-        platform: 'desktop',
-        app_version: version,
-      },
-    },
-  })
+  // Disabled for internal debug builds - no Sentry initialization
+  return
+  // const settings = getSettings()
+  // if (!settings.allowReportingAndTracking) {
+  //   return
+  // }
+  //
+  // const version = app.getVersion()
+  // Sentry.init({
+  //   dsn: 'https://eca691c5e01ebfa05958fca1fcb487a9@sentry.midway.run/697',
+  //   integrations: [],
+  //   environment: process.env.NODE_ENV || 'development',
+  //   // Performance Monitoring - set to 1.0 since we control sampling in beforeSend
+  //   sampleRate: 1.0,
+  //   tracesSampler(samplingContext) {
+  //     // For traces related to knowledge-base operations, always sample
+  //     const isKnowledgeBaseTrace =
+  //       samplingContext.tags?.component === 'knowledge-base-file' ||
+  //       samplingContext.tags?.component === 'knowledge-base-db' ||
+  //       samplingContext.tags?.component === 'knowledge-base'
+  //
+  //     if (isKnowledgeBaseTrace) {
+  //       return 1.0 // 100% sampling for knowledge-base traces
+  //     }
+  //
+  //     return 0.1 // 10% sampling for other traces
+  //   },
+  //   release: version,
+  //   // 设置全局标签
+  //   initialScope: {
+  //     tags: {
+  //       platform: 'desktop',
+  //       app_version: version,
+  //     },
+  //   },
+  // })
 }
 
 initSentry()
@@ -45,24 +47,37 @@ initSentry()
 /**
  * 主进程的 Sentry 适配器实现
  * 使用 @sentry/node 进行错误上报
+ * Disabled for internal debug builds - no Sentry reporting
  */
 export class MainSentryAdapter implements SentryAdapter {
   captureException(error: any): void {
-    Sentry.captureException(error)
+    // Disabled for internal debug builds - no Sentry reporting
+    // Sentry.captureException(error)
   }
 
   withScope(callback: (scope: SentryScope) => void): void {
-    Sentry.withScope((sentryScope) => {
-      const scope: SentryScope = {
-        setTag(key: string, value: string): void {
-          sentryScope.setTag(key, value)
-        },
-        setExtra(key: string, value: any): void {
-          sentryScope.setExtra(key, value)
-        },
-      }
-      callback(scope)
-    })
+    // Disabled for internal debug builds - no Sentry reporting
+    // Create a no-op scope to avoid errors
+    const scope: SentryScope = {
+      setTag(key: string, value: string): void {
+        // No-op
+      },
+      setExtra(key: string, value: any): void {
+        // No-op
+      },
+    }
+    callback(scope)
+    // Sentry.withScope((sentryScope) => {
+    //   const scope: SentryScope = {
+    //     setTag(key: string, value: string): void {
+    //       sentryScope.setTag(key, value)
+    //     },
+    //     setExtra(key: string, value: any): void {
+    //       sentryScope.setExtra(key, value)
+    //     },
+    //   }
+    //   callback(scope)
+    // })
   }
 }
 

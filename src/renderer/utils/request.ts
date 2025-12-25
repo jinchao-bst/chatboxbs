@@ -67,6 +67,32 @@ async function doRequest(url: string, options: RequestOptions): Promise<Response
     }
 
     const res = await fetch(requestUrl, { method, headers, body, signal })
+    
+    // Log API responses for debugging (especially for chat/completions)
+    if (requestUrl.includes('/chat/completions') || requestUrl.includes('8234')) {
+      try {
+        // Clone the response to read it without consuming the original
+        const clonedRes = res.clone()
+        const responseText = await clonedRes.text()
+        console.log('==================================================')
+        console.log(`[Qwen API Raw Response] ${requestUrl}`)
+        console.log('==================================================')
+        console.log('Status:', res.status, res.statusText)
+        console.log('Headers:', Object.fromEntries(res.headers.entries()))
+        console.log('Response Body (first 2000 chars):', responseText.substring(0, 2000))
+        console.log('Full Response Body:', responseText)
+        try {
+          const jsonBody = JSON.parse(responseText)
+          console.log('Parsed JSON:', JSON.stringify(jsonBody, null, 2))
+        } catch (e) {
+          console.log('Response is not valid JSON')
+        }
+        console.log('==================================================')
+      } catch (e) {
+        console.warn('[API Response] Failed to log response:', e)
+      }
+    }
+    
     if (!res.ok) {
       const err = await res.text().catch(() => null)
       throw new ApiError(`Status Code ${res.status}`, err ?? undefined)

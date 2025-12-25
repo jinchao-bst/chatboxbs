@@ -11,30 +11,13 @@ import { ofetch } from 'ofetch'
 const measurement_id = `G-B365F44W6E`
 const api_secret = `pRnsvLo-REWLVzV_PbKvWg`
 
+// Google Analytics Measurement Protocol disabled for internal debug builds.
+// Keep API shape, but do not send any network requests.
 export async function event(name: string, params: any = {}) {
-  const clientId = store.getConfig().uuid
-  const res = await ofetch(
-    `https://www.google-analytics.com/mp/collect?measurement_id=${measurement_id}&api_secret=${api_secret}`,
-    {
-      method: 'POST',
-      body: {
-        user_id: clientId,
-        client_id: clientId,
-        events: [
-          {
-            name: name,
-            params: {
-              app_name: 'chatbox',
-              app_version: app.getVersion(),
-              chatbox_platform_type: 'desktop',
-              chatbox_platform: 'desktop',
-              app_platform: process.platform,
-              ...params,
-            },
-          },
-        ],
-      },
-    }
-  )
-  return res
+  void name
+  void params
+  void measurement_id
+  void api_secret
+  // no-op
+  return undefined
 }
